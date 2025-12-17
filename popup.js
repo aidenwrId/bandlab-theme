@@ -1,5 +1,8 @@
+// BandLab Theme Extension Popup Logic
+// © aidenwrld — All Rights Reserved
+
 document.addEventListener('DOMContentLoaded', () => {
-  // --- Constants --- 
+  // --- Constants ---
   const STORAGE_KEY_SELECTED_THEME_ID = 'selectedThemeId'; // Stores the ID of the active theme
   const STORAGE_KEY_USER_THEMES = 'userThemes'; // Stores an array of user-saved themes
   const CUSTOM_THEME_EDITOR_ID = '_custom_editor_'; // Special ID for when editor is active

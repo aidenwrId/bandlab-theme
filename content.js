@@ -1,7 +1,15 @@
 // content.js
 
 const THEME_STYLE_ID = 'bandlab-custom-theme-style';
+const STORAGE_KEY_USER_THEMES = 'userThemes';
+const STORAGE_KEY_SELECTED_THEME_ID = 'selectedThemeId';
 let currentThemeCSSFile = null; // Stores the <link> element for predefined themes
+let floatingPanel;
+let floatingSelect;
+let floatingApplyButton;
+let userThemes = {};
+let isDraggingPanel = false;
+let dragOffset = { x: 0, y: 0 };
 
 console.log("BandLab Themer content script loaded. v2"); // Added version for quick check
 
@@ -177,6 +185,25 @@ function applyCustomTheme(colors, isAnimated) {
         color: var(--custom-text-color) !important; background-color: transparent !important;
     }
 
+    /* Do not interfere with BandLab knobs/sliders/meters */
+    .mix-editor-knob,
+    .mix-editor-knob *,
+    .mix-editor-slider,
+    .mix-editor-slider *,
+    .mix-editor-automation-slider,
+    .mix-editor-automation-slider *,
+    .mix-editor-volume-automation,
+    .mix-editor-volume-automation *,
+    .device-knob,
+    .device-knob *,
+    .device-slider,
+    .device-slider *,
+    .ui-knob,
+    .ui-knob *,
+    input[type="range"] {
+        all: revert !important;
+    }
+
     /* Mix Editor Track Headers */
     .mix-editor-block-headers {
         background-color: var(--custom-primary-bg) !important;
@@ -285,6 +312,254 @@ function applyCustomTheme(colors, isAnimated) {
   `;
   (document.head || document.documentElement).appendChild(styleElement);
   console.log("Applied custom theme style element. Animated:", isAnimated);
+}
+
+function injectFloatingPanelStyles() {
+  if (document.getElementById('bandlab-floating-theme-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'bandlab-floating-theme-styles';
+  style.textContent = `
+    #bandlab-floating-theme-panel {
+      position: fixed;
+      top: 80px;
+      left: 80px;
+      width: 320px;
+      background: rgba(16, 16, 20, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      box-shadow: 0 22px 60px rgba(0,0,0,0.55), 0 0 28px rgba(43, 233, 119, 0.28);
+      color: #f6f7fb;
+      z-index: 2147483646;
+      backdrop-filter: blur(16px);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: none;
+      animation: bandlabPanelPop 260ms ease;
+    }
+
+    #bandlab-floating-theme-panel.visible {
+      display: block;
+    }
+
+    #bandlab-floating-theme-panel .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      cursor: grab;
+      gap: 10px;
+      background: linear-gradient(135deg, rgba(43, 233, 119, 0.15), rgba(84, 92, 255, 0.15));
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px 18px 0 0;
+    }
+
+    #bandlab-floating-theme-panel .panel-header h4 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.3px;
+    }
+
+    #bandlab-floating-theme-panel .panel-header .close-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #bandlab-floating-theme-panel .panel-body {
+      padding: 14px 16px 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    #bandlab-floating-theme-panel select,
+    #bandlab-floating-theme-panel button {
+      font-size: 0.95rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 12px;
+      color: #f6f7fb;
+      background: rgba(255,255,255,0.06);
+      width: 100%;
+      box-sizing: border-box;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #bandlab-floating-theme-panel button.primary {
+      background: linear-gradient(125deg, #2be977, #1bc861);
+      box-shadow: 0 0 22px rgba(43, 233, 119, 0.35);
+      border: none;
+    }
+
+    #bandlab-floating-theme-panel button:hover,
+    #bandlab-floating-theme-panel select:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    }
+
+    #bandlab-floating-theme-panel .hint {
+      font-size: 0.82rem;
+      color: #a6a9b6;
+      margin: 0;
+    }
+
+    @keyframes bandlabPanelPop {
+      0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+  `;
+  (document.head || document.documentElement).appendChild(style);
+}
+
+function buildFloatingPanel() {
+  if (floatingPanel) return;
+  injectFloatingPanelStyles();
+  floatingPanel = document.createElement('div');
+  floatingPanel.id = 'bandlab-floating-theme-panel';
+  floatingPanel.innerHTML = `
+    <div class="panel-header">
+      <h4>Theme Quick Switcher</h4>
+      <button class="close-btn" aria-label="Close">×</button>
+    </div>
+    <div class="panel-body">
+      <select id="bandlab-floating-selector"></select>
+      <button class="primary" id="bandlab-floating-apply">Apply Theme</button>
+      <p class="hint">Right click anywhere (Shift + right click for default menu). Drag the top bar to move.</p>
+    </div>
+  `;
+  document.body.appendChild(floatingPanel);
+
+  floatingSelect = floatingPanel.querySelector('#bandlab-floating-selector');
+  floatingApplyButton = floatingPanel.querySelector('#bandlab-floating-apply');
+
+  const closeBtn = floatingPanel.querySelector('.close-btn');
+  closeBtn.addEventListener('click', hideFloatingPanel);
+
+  floatingApplyButton.addEventListener('click', () => {
+    const selectedId = floatingSelect.value;
+    const theme = internalPresetThemes[selectedId] || userThemes[selectedId];
+    if (theme) {
+      applyTheme(theme);
+      chrome.storage.sync.set({ [STORAGE_KEY_SELECTED_THEME_ID]: selectedId });
+    }
+  });
+
+  enablePanelDrag(floatingPanel.querySelector('.panel-header'));
+}
+
+function enablePanelDrag(handle) {
+  if (!handle) return;
+  handle.addEventListener('mousedown', (event) => {
+    isDraggingPanel = true;
+    dragOffset.x = event.clientX - floatingPanel.offsetLeft;
+    dragOffset.y = event.clientY - floatingPanel.offsetTop;
+    handle.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mousemove', (event) => {
+    if (!isDraggingPanel) return;
+    const nextLeft = event.clientX - dragOffset.x;
+    const nextTop = event.clientY - dragOffset.y;
+    floatingPanel.style.left = Math.max(12, Math.min(window.innerWidth - floatingPanel.offsetWidth - 12, nextLeft)) + 'px';
+    floatingPanel.style.top = Math.max(12, Math.min(window.innerHeight - floatingPanel.offsetHeight - 12, nextTop)) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDraggingPanel) {
+      isDraggingPanel = false;
+      handle.style.cursor = 'grab';
+    }
+  });
+}
+
+function populateFloatingSelect(selectedId) {
+  if (!floatingSelect) return;
+  floatingSelect.innerHTML = '';
+
+  const presetGroup = document.createElement('optgroup');
+  presetGroup.label = 'Presets';
+  Object.values(internalPresetThemes).forEach(theme => {
+    const opt = document.createElement('option');
+    opt.value = theme.id;
+    opt.textContent = theme.name;
+    presetGroup.appendChild(opt);
+  });
+
+  floatingSelect.appendChild(presetGroup);
+
+  if (Object.keys(userThemes).length > 0) {
+    const userGroup = document.createElement('optgroup');
+    userGroup.label = 'My Themes';
+    Object.values(userThemes).forEach(theme => {
+      const opt = document.createElement('option');
+      opt.value = theme.id;
+      opt.textContent = theme.name;
+      userGroup.appendChild(opt);
+    });
+    floatingSelect.appendChild(userGroup);
+  }
+
+  floatingSelect.value = selectedId || floatingSelect.options[0]?.value || '_default_internal';
+}
+
+function showFloatingPanel(x, y) {
+  buildFloatingPanel();
+  floatingPanel.classList.add('visible');
+  const panelWidth = floatingPanel.offsetWidth || 320;
+  const panelHeight = floatingPanel.offsetHeight || 200;
+  const left = Math.min(Math.max(12, x), window.innerWidth - panelWidth - 12);
+  const top = Math.min(Math.max(12, y), window.innerHeight - panelHeight - 12);
+  floatingPanel.style.left = `${left}px`;
+  floatingPanel.style.top = `${top}px`;
+}
+
+function hideFloatingPanel() {
+  if (floatingPanel) {
+    floatingPanel.classList.remove('visible');
+  }
+}
+
+function applyTheme(theme) {
+  if (theme.type === 'predefined') {
+    if (theme.id === '_default_internal') {
+      applyPredefinedTheme('default');
+    } else {
+      applyPredefinedTheme(theme.contentJsRef || theme.id);
+    }
+  } else if (theme.type === 'custom') {
+    applyCustomTheme(theme.colors, theme.isAnimated || false);
+  }
+}
+
+function bootstrapFloatingPanel() {
+  chrome.storage.sync.get([STORAGE_KEY_USER_THEMES, STORAGE_KEY_SELECTED_THEME_ID], (result) => {
+    userThemes = result[STORAGE_KEY_USER_THEMES] || {};
+    const selectedId = result[STORAGE_KEY_SELECTED_THEME_ID] || '_default_internal';
+    buildFloatingPanel();
+    populateFloatingSelect(selectedId);
+  });
+
+  document.addEventListener('contextmenu', (event) => {
+    if (event.shiftKey) return; // Allow default menu with Shift + right click
+    if (floatingPanel && floatingPanel.contains(event.target)) return; // If interacting with panel itself
+    event.preventDefault();
+    populateFloatingSelect(floatingSelect?.value || '_default_internal');
+    showFloatingPanel(event.clientX, event.clientY);
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'sync') return;
+    if (changes[STORAGE_KEY_USER_THEMES]) {
+      userThemes = changes[STORAGE_KEY_USER_THEMES].newValue || {};
+      populateFloatingSelect(floatingSelect?.value || '_default_internal');
+    }
+    if (changes[STORAGE_KEY_SELECTED_THEME_ID]) {
+      populateFloatingSelect(changes[STORAGE_KEY_SELECTED_THEME_ID].newValue);
+    }
+  });
 }
 
 // Listen for messages from the popup
@@ -425,6 +700,8 @@ const internalPresetThemes = {
     //   // contentJsRef: "another-theme-file" // if predefined and uses a different CSS file name
     // },
 };
+
+bootstrapFloatingPanel();
 
 // Initial theme application on page load
 (function() {
