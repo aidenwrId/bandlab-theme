@@ -5,6 +5,9 @@
   <link rel="stylesheet" type="text/css" href="popup.css">
 </head>
 <body>
+  <div class="orb orb-left" aria-hidden="true"></div>
+  <div class="orb orb-right" aria-hidden="true"></div>
+
   <header class="hero">
     <div class="brand-mark" aria-hidden="true">
       <div class="glow"></div>
@@ -15,6 +18,10 @@
       <h3>Theme Studio</h3>
       <p class="subtitle">Premium toggles, instant previews, saved looks.</p>
     </div>
+    <div class="hero-actions">
+      <button id="apply-selected-theme" class="primary pill-button">Apply</button>
+      <button class="ghost pill-button" onclick="window.location.reload()">Refresh</button>
+    </div>
   </header>
 
   <section class="section card">
@@ -22,6 +29,7 @@
       <div>
         <p class="eyebrow">Active Theme</p>
         <h4>Pick a vibe</h4>
+        <p class="microcopy">Curated presets + your saved looks.</p>
       </div>
       <span class="pill">Live</span>
     </div>
@@ -31,9 +39,7 @@
         <option value="_dark_internal">Dark Mode</option>
         <!-- Presets & User themes will be populated here by JS -->
       </select>
-      <button id="apply-selected-theme" class="primary">Apply Selected</button>
     </div>
-    <p class="microcopy">Instantly swaps styles in your active BandLab tab.</p>
   </section>
 
   <section id="custom-colors-editor" class="section card">
@@ -41,10 +47,10 @@
       <div>
         <p class="eyebrow">Custom Builder</p>
         <h4>Edit Custom Colors</h4>
+        <p class="microcopy">Dial in your own palette or tweak an imported preset.</p>
       </div>
       <span class="pill soft">Create</span>
     </div>
-    <p class="info-text">Dial in your own palette or tweak an imported preset.</p>
     <div class="color-grid">
       <div class="color-picker-row">
         <label for="primary-color">Primary Background</label>
@@ -82,7 +88,7 @@
     </div>
 
     <div class="action-row">
-      <button id="save-current-custom-theme" class="primary">Save Current as New Theme</button>
+      <button id="save-current-custom-theme" class="primary full">Save Current as New Theme</button>
     </div>
   </section>
 
@@ -91,6 +97,7 @@
       <div>
         <p class="eyebrow">Library</p>
         <h4>Manage Themes</h4>
+        <p class="microcopy">Export, import, and tidy up your collection.</p>
       </div>
       <span class="pill">Tools</span>
     </div>
@@ -106,7 +113,7 @@
       <label for="import-file" class="visually-hidden">Import theme file</label>
       <input type="file" id="import-file" accept=".json">
     </div>
-    <button id="delete-selected-custom-theme" class="danger">Delete Theme from Library</button>
+    <button id="delete-selected-custom-theme" class="danger full">Delete Theme from Library</button>
     <p class="info-text">Select a theme from the dropdown first. Only "My Themes" can be deleted.</p>
   </section>
 
