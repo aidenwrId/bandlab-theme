@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BandLab Themer</title>
+  <link rel="stylesheet" type="text/css" href="popup.css">
+</head>
+<body>
+  <h3>BandLab Theme Manager</h3>
+
+  <div class="section">
+    <h4>Active Theme</h4>
+    <select id="theme-selector">
+      <option value="_default_internal">BandLab Default</option>
+      <option value="_dark_internal">Dark Mode</option>
+      <!-- Presets & User themes will be populated here by JS -->
+    </select>
+    <button id="apply-selected-theme" class="small-button">Apply Selected</button>
+  </div>
+
+  <div id="custom-colors-editor" class="section">
+    <h4>Edit Custom Colors</h4>
+    <p class="info-text">Select or import a custom theme, or modify colors below to create a new one. </p>
+    <div class="color-picker-row">
+      <label for="primary-color">Primary Background:</label>
+      <input type="color" id="primary-color" value="#333333">
+    </div>
+    <div class="color-picker-row">
+      <label for="secondary-color">Secondary Background:</label>
+      <input type="color" id="secondary-color" value="#555555">
+    </div>
+    <div class="color-picker-row">
+      <label for="accent-color">Accent Color:</label>
+      <input type="color" id="accent-color" value="#1e90ff">
+    </div>
+    <div class="color-picker-row">
+      <label for="text-color">Text Color:</label>
+      <input type="color" id="text-color" value="#ffffff">
+    </div>
+
+    <h5>Waveform Colors</h5>
+    <div class="color-picker-row">
+      <label for="waveform-color1">Waveform 1 (e.g., Audio):</label>
+      <input type="color" id="waveform-color1" value="#00FF00">
+    </div>
+    <div class="color-picker-row">
+      <label for="waveform-color2">Waveform 2 (e.g., MIDI/Alt):</label>
+      <input type="color" id="waveform-color2" value="#FF0000">
+    </div>
+    <button id="save-current-custom-theme">Save Current as New Theme</button>
+  </div>
+
+  <div id="theme-management" class="section">
+    <h4>Manage Themes</h4>
+    <input type="text" id="theme-name-input" placeholder="Enter theme name for save/export">
+    <button id="export-active-theme">Export Active Theme</button>
+    <div class="file-import-row">
+      <label for="import-file" class="visually-hidden">Import theme file:</label>
+      <input type="file" id="import-file" accept=".json">
+      <button id="import-theme-file">Import from File</button>
+    </div>
+    <button id="delete-selected-custom-theme" class="danger-button">Delete Theme from Library</button>
+    <p class="info-text">To delete, select a theme from the 'Active Theme' dropdown first. Only 'My Themes' can be deleted.</p>
+  </div>
+
+  <script src="popup.js"></script>
+  <footer class="copyright-footer">
+    <p>&copy; copyright 2025 by aidenwrld</p>
+  </footer>
+</body>
+</html> 
